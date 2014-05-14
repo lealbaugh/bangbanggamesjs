@@ -19,7 +19,7 @@ var io = require('socket.io').listen(server);
 io.set('log level', 1);
 
 
-//Mongo setup
+//Mongo setup: if I'm running this locally, apikeys.js contains my keys; on Heroku, it's an env variable.
 var mongoUri;
 try {
 	var keys = require("./apikeys.js");
@@ -35,12 +35,14 @@ var mongo = require('mongodb'); //https://npmjs.org/package/mongodb
 io.sockets.on('connection', function(socket){ 
 	socket.on('message',function(event){ 
 		console.log('Message: ',event);
-		if (event=="hello"){
+		if (event=="requestinggeocodes"){
 			sendOutExistingLocations(socket);
 		}
 	});
 });
 
+// For the map, the client sends out a request for all the existing locations;
+// pull them from the "geocodes" and emit them out
 function sendOutExistingLocations(socket) {
 	mongo.Db.connect(mongoUri, function (err, db) {
 		if (err) {
@@ -93,7 +95,7 @@ app.post('/twilio', function(req, res) {
 					var placename = content;
 					var record = {"placename":placename, "latitude": latitude, "longitude": longitude, "status":"OK"};
 					putInDB('geocodes', record);
-					io.sockets.emit("geocode", record);
+					io.sockets.in("map").emit("geocode", record);
 				}
 			}
 		});
