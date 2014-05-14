@@ -79,6 +79,7 @@ var geocoder = require('geocoder');
 
 app.post('/twilio', function(req, res) {
 	var content = req.body.Body;
+	console.log(content);
 	if (content) {
 		geocoder.geocode(content, function ( err, data ) {
 			if (err) {
