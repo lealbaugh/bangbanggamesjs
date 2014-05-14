@@ -20,9 +20,16 @@ io.set('log level', 1);
 
 
 //Mongo setup
-var keys = require("./apikeys.js");
+var mongoUri;
+try {
+	var keys = require("./apikeys.js");
+	mongoUri = keys.mongoURL;
+}
+catch (e) {
+	mongoUri = process.env.MONGOHQ_URL;
+}
 var mongo = require('mongodb'); //https://npmjs.org/package/mongodb
-var mongoUri = keys.mongoURL;
+
 
 // Add a connect listener
 io.sockets.on('connection', function(socket){ 
