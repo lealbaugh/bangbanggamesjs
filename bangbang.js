@@ -39,6 +39,10 @@ io.sockets.on('connection', function(socket){
 			sendOutExistingLocations(socket);
 		}
 	});
+	socket.on("join", function(roomname) {
+		console.log("socket joined "+roomname);
+		socket.join(roomname);
+	});
 });
 
 // For the map, the client sends out a request for all the existing locations;

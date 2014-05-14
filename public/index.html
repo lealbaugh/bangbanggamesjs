@@ -23,7 +23,12 @@
         var socket = io.connect();
         var bang = 'point.png';
 
-        socket.join("map");
+        socket.on("connect", function(data) {
+          socket.emit("join", "map");
+          // Rooms are joined up on the server side, so send a request to join us to "map"
+          socket.emit("message", "requestinggeocodes");
+        })
+        
         socket.on('message', function(message, data) {
             console.log("got message: "+message);
         });
@@ -55,7 +60,6 @@
           };
 
         google.maps.event.addDomListener(window, 'load', initialize);
-        socket.emit("message", "requestinggeocodes");
     </script>
 </head>
 <body>
