@@ -14,61 +14,84 @@ server.listen(port, function() { console.log(this._connectionKey)});
 console.log('http server listening on %d', port);
 
 
-// // Create a Socket.IO instance, passing it our server
-// var io = require('socket.io').listen(server);
-// io.set('log level', 1);
+// Create a Socket.IO instance, passing it our server
+var io = require('socket.io').listen(server);
+io.set('log level', 1);
 
 
-// //Mongo setup
-// var keys = require("./apikeys.js");
-// var mongo = require('mongodb'); //https://npmjs.org/package/mongodb
-// var mongoUri = keys.mongoURL;
+//Mongo setup
+var keys = require("./apikeys.js");
+var mongo = require('mongodb'); //https://npmjs.org/package/mongodb
+var mongoUri = keys.mongoURL;
 
-// // Add a connect listener
-// io.sockets.on('connection', function(socket){ 
-// 	socket.on('message',function(event){ 
-// 		console.log('Message: ',event);
-// 		if (event=="hello"){
-// 			sendOutExistingLocations(socket);
-// 		}
-// 	});
-// });
+// Add a connect listener
+io.sockets.on('connection', function(socket){ 
+	socket.on('message',function(event){ 
+		console.log('Message: ',event);
+		if (event=="hello"){
+			sendOutExistingLocations(socket);
+		}
+	});
+});
 
-// function sendOutExistingLocations(socket) {
-// 	mongo.Db.connect(mongoUri, function (err, db) {
-// 		if (err) {
-// 			console.log(err);
-// 		}
-// 		var pastGeocodes = db.collection('geocodes').find({});
-// 		pastGeocodes.each(function(err, doc) {
-// 			if (err) {
-// 				console.log(err);
-// 			}
-// 			else {
-// 				console.log(doc);
-// 				socket.emit("geocode", doc);
-// 			}
-// 		});
-// 	});
-// }
+function sendOutExistingLocations(socket) {
+	mongo.Db.connect(mongoUri, function (err, db) {
+		if (err) {
+			console.log(err);
+		}
+		var pastGeocodes = db.collection('geocodes').find({});
+		pastGeocodes.each(function(err, doc) {
+			if (err) {
+				console.log(err);
+			}
+			else {
+				console.log(doc);
+				socket.emit("geocode", doc);
+			}
+		});
+	});
+}
 
+function putInDB(collection, record) {
+	mongo.Db.connect(mongoUri, function (err, db) {
+	    if (err) {
+	    	console.log(err);
+	    }
+	    db.collection(collection).insert(record, function (err, docs) {
+	    	if (err) {
+	    		console.log(err);
+	    	}
+	    	else {
+	    		console.log("Inserted document into collection "+collection);
+	    	}
+	    });
+	  });
+}
 
-// var geocoder = require('geocoder');
+var geocoder = require('geocoder');
 
 app.post('/twilio', function(req, res) {
-	// var content = req.body.Body;
-	console.log(req.body);
-	// if (content) {
-	// 	// geocoder.geocode(content, function ( err, data ) {
-	// 	// 	if (data) {
-	// 	// 		console.log(data)
-	// 	// 	}
-	// 	//   // io.sockets.broadcast.emit(data)
-	// 	// });
+	var content = req.body.Body;
+	if (content) {
+		geocoder.geocode(content, function ( err, data ) {
+			if (err) {
+				var record = {};
+			}
+			if (data) {
+				if (data.status == "OK") {
+					console.log(data.results[0].geometry)
+					var latitude = data.results[0].geometry.location.lat;
+					var longitude = data.results[0].geometry.location.lng;
+					var placename = content;
+					var record = {"placename":placename, "latitude": latitude, "longitude": longitude, "status":"OK"};
+					putInDB('geocodes', record);
+					io.sockets.emit("geocode", record);
+				}
+			}
+		});
 		
-	// } 
+	} 
 	res.writeHead(200, {"Content-Type": "text/plain"});
-	res.write("ok");
 	res.end();
 });
 
