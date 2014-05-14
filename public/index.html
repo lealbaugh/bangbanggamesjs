@@ -21,6 +21,7 @@
         var geocoder;
         var places = {};
         var socket = io.connect();
+        var bang = 'point.png';
 
         socket.on('message', function(message, data) {
             console.log("got message: "+message);
@@ -37,7 +38,8 @@
             // console.log(location);
             var marker = new google.maps.Marker({
               map: map,
-              position: location
+              position: location,
+              icon: bang
             });
         }
 
