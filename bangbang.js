@@ -18,10 +18,6 @@ console.log('http server listening on %d', port);
 var io = require('socket.io').listen(server);
 io.set('log level', 1);
 
-
-
-
-
 // Add a connect listener
 io.sockets.on('connection', function(socket){ 
 	socket.on('message',function(event){ 
@@ -31,7 +27,7 @@ io.sockets.on('connection', function(socket){
 		}
 	});
 	socket.on("join", function(roomname) {
-		console.log("socket joined "+roomname);
+		console.log("Socket joined "+roomname);
 		socket.join(roomname);
 	});
 });
@@ -55,10 +51,10 @@ try {
 }
 catch (e) {
 	mongoUri = process.env.MONGOHQ_URL;
-	twilioAccount = process.env.TWILIO_SID;
-	twilioAuth = process.env.TWILIO_AUTH;
+	twilioAccount = process.env.TWILIO_ACCOUNT_SID;
+	twilioAuth = process.env.TWILIO_AUTH_TOKEN;
 	twilioNumber = process.env.TWILIO_NUMBER;
-	leacode = proces.env.LEACODE
+	leacode = process.env.LEACODE
 }
 
 var mongo = require('mongodb'); //https://npmjs.org/package/mongodb
@@ -68,17 +64,17 @@ var twilio = require('twilio')(twilioAccount, twilioAuth);
 
 function putInDB(collection, record) {
 	mongo.Db.connect(mongoUri, function (err, db) {
-	    if (err) {
-	    	console.log(err);
-	    }
-	    db.collection(collection).insert(record, function (err, docs) {
-	    	if (err) {
-	    		console.log(err);
-	    	}
-	    	else {
-	    		console.log("Inserted document into collection "+collection);
-	    	}
-	    });
+		if (err) {
+			console.log(err);
+		}
+		db.collection(collection).insert(record, function (err, docs) {
+			if (err) {
+				console.log(err);
+			}
+			else {
+				console.log("Inserted document into collection "+collection);
+			}
+		});
 	  });
 }
 
@@ -106,7 +102,7 @@ function participantMap(sender, content) {
 		}
 		if (data) {
 			if (data.status == "OK") {
-				console.log(data.results[0].geometry)
+				// console.log(data.results[0].geometry)
 				var latitude = data.results[0].geometry.location.lat;
 				var longitude = data.results[0].geometry.location.lng;
 				var placename = content;
@@ -131,7 +127,7 @@ function sendOutExistingLocations(socket) {
 				console.log(err);
 			}
 			else {
-				console.log(doc);
+				// console.log(doc);
 				socket.emit("geocode", doc);
 			}
 		});
@@ -143,29 +139,64 @@ function sendOutExistingLocations(socket) {
 function storeWikipediaArticles(sender, content) {
 	var contribution = {"contributor": sender, "content": content}
 	mongo.Db.connect(mongoUri, function (err, db) {
-		db.collection("wikipedias").update({"status":"active"}, { $push: {"contributions":contribution}}), {w:1}, function(err) {
+		db.collection("wikipedias").update({"status":"active"}, { $push: {"contributions":contribution}}, {w:1}, function(err) {
 			if (err){
 				console.log(err);
 			}
-			else {
-				console.log("Gamestate is now: "+newstate);
-			}
-	    });
+		});
 	});
 }
 
 function distributeWikipedias() {
-
+	console.log("Distributing wikipedias!");
+	mongo.Db.connect(mongoUri, function (err, db) {
+		db.collection("wikipedias").find({"status":"active"}).nextObject(function (err, doc) {
+			var contributions = doc.contributions;
+			contributions = shuffle(contributions);
+			// first contributor gets the last contributor's contribution
+			contributions[0].recipient = contributions[contributions.length-1].contributor;
+			// second and later contributors gets the contribution of the contributor before them.
+			for (var i=1; i<contributions.length; i++) {
+				contributions[i].recipient = contributions[i-1].contributor;
+			}
+			for (var i=0; i<contributions.length; i++) {
+				sendMessage(contributions.recipient, contributions.content);
+			}
+			db.collection("wikipedias").update({"status":"active"}, { $set: {"contributions":contributions}}, {w:1}, function(err) {
+				if (err){
+					console.log(err);
+				}
+				else {
+					console.log("Wikipedias have been distributed: "+contributions);
+				}
+			});
+		});
+	});	
 }
 
 
+//Fisher-Yates shuffle from http://bost.ocks.org/mike/shuffle/
+function shuffle(array) {
+	var m = array.length, t, i;
+	// While there remain elements to shuffle…
+	while (m) {
+		// Pick a remaining element…
+		i = Math.floor(Math.random() * m--);
+		// And swap it with the current element.
+		t = array[m];
+		array[m] = array[i];
+		array[i] = t;
+	}
+	return array;
+}
+
 // ---------- Two truths and a lie Part 1-----------
-// "Text in something true and/or something false.
+// "Text in something true and/or something false. (In separate texts.)
 // Prepend a true statement with a 'T' and a false one with 'F'; for example:
 // "T Los Vegas is west of Los Angeles." or "F !!Con is boring."
 
 function logTrueFalse(sender, content) {
-
+	return;
 }
 
 
@@ -200,21 +231,27 @@ function scoreTrueFalse(player, response) {
 app.post('/twilio', function(req, res) {
 	var sender = req.body.From;
 	var content = req.body.Body;
-	console.log(content);
+	console.log("Received SMS: "+content);
 	if (content) {
 		mongo.Db.connect(mongoUri, function (err, db) {
 			var time = new Date;
-			db.collection("transcript").insert({"sender":sender, "content": content, "time": time});
+			// db.collection("transcript").insert({"sender":sender, "content": content, "time": time});
 			db.collection("game").find({"status":"active"}).nextObject(function (err, doc) {
 				var gamemode = doc.mode;
-				console.log(doc.mode);
+				console.log(gamemode);
 				switch (gamemode) {
 					case "map":
 						participantMap(sender, content);
+						break;
 					case "acquiringtruefalse":
 						logTrueFalse(sender, content);
+						break;
+					case "acquiringwikipedias":
+						storeWikipediaArticles(sender, content);
+						break;
 					case "truefalse":
 						scoreTrueFalse(sender, content);
+						break;
 				}
 			});
 		});	
@@ -238,10 +275,12 @@ app.post('/sekkritcommand', function(req,res) {
 		if (command == "action") {
 			var action = req.body.action;
 			if (action == "distributewikipedias") {
-				distributewikipedias();
+				distributeWikipedias();
 			}
 		}
-
+		res.writeHead(200, {"Content-Type": "text/plain"});
+		res.end();
+	
 	}
 	else {
 		res.writeHead(403, {"Content-Type": "text/plain"});
@@ -251,14 +290,14 @@ app.post('/sekkritcommand', function(req,res) {
 
 function changeGameState(newstate) {
 	mongo.Db.connect(mongoUri, function (err, db) {
-		db.collection("game").update({"status":"active"}, { $set: {"mode":newstate}}), {w:1}, function(err) {
+		db.collection("game").update({"status":"active"}, { $set: {"mode":newstate}}, {w:1}, function(err) {
 			if (err){
 				console.log(err);
 			}
 			else {
 				console.log("Gamestate is now: "+newstate);
 			}
-	    });
+		});
 	});
 }
 

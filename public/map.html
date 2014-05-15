@@ -22,11 +22,15 @@
         var places = {};
         var socket = io.connect();
         var bang = 'point.png';
+        var initializedMap = false;
 
         socket.on("connect", function(data) {
-          socket.emit("join", "map");
-          // Rooms are joined up on the server side, so send a request to join us to "map"
-          socket.emit("message", "requestinggeocodes");
+          if (!initializedMap) {
+            socket.emit("join", "map");
+            // Rooms are joined up on the server side, so send a request to join us to "map"
+            socket.emit("message", "requestinggeocodes");
+            initializedMap = true;
+          }
         })
         
         socket.on('message', function(message, data) {
