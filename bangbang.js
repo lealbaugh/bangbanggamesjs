@@ -135,7 +135,7 @@ function sendOutExistingLocations(socket) {
 }
 
 // ---------------- Wikipedia swap -----------------
-// "Text in an excellent Wikipedia article to receive one in return."
+// "Text in an interesting Wikipedia article. Later you will receive one in return."
 function storeWikipediaArticles(sender, content) {
 	var contribution = {"contributor": sender, "content": content}
 	mongo.Db.connect(mongoUri, function (err, db) {
@@ -191,19 +191,44 @@ function shuffle(array) {
 }
 
 // ---------- Two truths and a lie Part 1-----------
-// "Text in something true and/or something false. (In separate texts.)
-// Prepend a true statement with a 'T' and a false one with 'F'; for example:
-// "T Los Vegas is west of Los Angeles." or "F !!Con is boring."
+// Text in something true or something false.
+// Begin a true message with 'T' and a false one with 'F'
+// For example:
+// "T Las Vegas is west of Los Angeles." or "F Texas is the largest US state."
 
 function logTrueFalse(sender, content) {
-	return;
+	if (content.length > 1){
+		// Remove first character and uppercase it; call it "veracity.""
+		var veracity = content.charAt(0).toUpperCase();
+		// trim() remaining string to get factoid
+		var factoid = content.substring(1).trim();
+		// if veracity isn't either T or F, call it "unclear".
+		if (veracity != "T" && veracity != "F") {
+			veracity = "unclear";
+		}
+		console.log(factoid+" is "+veracity);
+		//Overcome Mongo's overly literal idea about how things work
+		var changetomake = {};
+		changetomake["contributedfacts."+veracity] = factoid;
+		mongo.Db.connect(mongoUri, function (err, db) {
+			db.collection("game").update({"status":"active"}, {$push: changetomake}, {w:1}, function(err) {
+				if (err){
+					console.log(err);
+				}
+				else {
+					console.log("put in DB");
+				}
+			});
+		});
+		return;
+	}	
 }
 
 
 // ---------- Two truths and a lie Part 2-----------
-// "Send in a txt consisting of a T or F for the truth or falseness of the following statements.
+// Which statements are true? Send your guess as a list of Ts and Fs.
+// Example txt: 'T T F F T F T'
 // First one to get all correct wins!
-// "Example txt: 'T T F F T F T'"
 
 function scoreTrueFalse(player, response) {
 	responseArray = response.toUpperCase().replace(/[^FT]/g,"").split("");
@@ -303,10 +328,12 @@ function changeGameState(newstate) {
 
 
 // TODO:
-// two truths and a lie
-// wikipedia swap
 // crowd-driven CYOA
+// democratic 20q
 // index redirects to current activity?
-
+// queries:
+// 	what words should exist?
+// 	
+// fix transcripting
 
 
