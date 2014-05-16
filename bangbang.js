@@ -22,8 +22,11 @@ io.set('log level', 1);
 io.sockets.on('connection', function(socket){ 
 	socket.on('message',function(event){ 
 		console.log('Message: ',event);
-		if (event=="requestinggeocodes"){
+		if (event=="requestinggeocodes") {
 			sendOutExistingLocations(socket);
+		}
+		else if (event=="requestingquery") {
+			sendOutQuery(socket);
 		}
 	});
 	socket.on("join", function(roomname) {
@@ -194,7 +197,7 @@ function shuffle(array) {
 // Text in something true or something false.
 // Begin a true message with 'T' and a false one with 'F'
 // For example:
-// "T Las Vegas is west of Los Angeles." or "F Texas is the largest US state."
+// "T Yosemite National Park is west of Los Angeles." or "F Texas is the largest US state."
 
 function logTrueFalse(sender, content) {
 	if (content.length > 1){
@@ -252,6 +255,36 @@ function scoreTrueFalse(player, response) {
 }
 
 
+// ------------------- Questions! ------------------
+function answerQuery(sender, content) {
+	mongo.Db.connect(mongoUri, function (err, db) {
+		db.collection("queries").update({"status":"active"}, { $push: {"answers":content}}, {w:1}, function(err) {
+			if (err){
+				console.log(err);
+			}
+		});
+	});
+	io.sockets.in("query").emit("answer", content);
+}
+
+function sendOutQuery(socket) {
+	mongo.Db.connect(mongoUri, function (err, db) {
+		db.collection("queries").find({"status":"active"}).nextObject(function (err, doc) {
+			if (err) {
+				console.log(err);
+			}
+			else {
+				var query = doc.query;
+				socket.emit("query", query);
+				var answers = doc.answers;
+				for (var i=0; i<answers.length; i++) {
+					socket.emit("answer", answers[i]);
+				}
+			}
+		});
+	});
+}
+
 // -------- Handle Twilio POST ---------------------
 app.post('/twilio', function(req, res) {
 	var sender = req.body.From;
@@ -260,7 +293,11 @@ app.post('/twilio', function(req, res) {
 	if (content) {
 		mongo.Db.connect(mongoUri, function (err, db) {
 			var time = new Date;
-			// db.collection("transcript").insert({"sender":sender, "content": content, "time": time});
+			db.collection("transcript").insert({"sender":sender, "content": content, "time": time}, function(err, objects) {
+				if (err) {
+					console.log(err);
+				}
+			});
 			db.collection("game").find({"status":"active"}).nextObject(function (err, doc) {
 				var gamemode = doc.mode;
 				console.log(gamemode);
@@ -276,6 +313,9 @@ app.post('/twilio', function(req, res) {
 						break;
 					case "truefalse":
 						scoreTrueFalse(sender, content);
+						break;
+					case "query":
+						answerQuery(sender, content);
 						break;
 				}
 			});
