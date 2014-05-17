@@ -28,6 +28,9 @@ io.sockets.on('connection', function(socket){
 		else if (event=="requestingquery") {
 			sendOutQuery(socket);
 		}
+		else if (event=="requestingtf") {
+			sendOutStatements(socket);
+		}
 	});
 	socket.on("join", function(roomname) {
 		console.log("Socket joined "+roomname);
@@ -237,22 +240,72 @@ function scoreTrueFalse(player, response) {
 	responseArray = response.toUpperCase().replace(/[^FT]/g,"").split("");
 	mongo.Db.connect(mongoUri, function (err, db) {
 		db.collection("answerkeys").find({"status":"active"}).nextObject(function (err, doc) {
-			var answerkey = doc.key;
-			var score = 0;
-			// Don't try to index out of either array's bounds
-			var checklength = responseArray.length;
-			if (answerkey.length < checklength) {
-				checklength = answerkey.length
-			}
-			for (var i =  0; i < checklength; i++) {
-				if (answerkey[i] == responseArray[i]) {
-					score = score+1;
+			if (doc.winner == "") {
+				var answerkey = doc.key;
+				var score = 0;
+				// Don't try to index out of either array's bounds
+				var checklength = responseArray.length;
+				if (answerkey.length < checklength) {
+					checklength = answerkey.length
 				}
-			};
-			sendMessage(player, "Your score: "+score);
+				for (var i =  0; i < checklength; i++) {
+					if (answerkey[i][0] == responseArray[i]) {
+						score = score+1;
+					}
+				};
+				if (score == answerkey.length) {
+					sendMessage(player, "You win!");
+					io.sockets.in("map").emit("tf", "stage3");
+					for (var i =  0; i < answerkey.length; i++) {
+						io.sockets.in("map").emit("truestatement", "<b>"+answerkey[i][0]+":</b>  "+answerkey[i][1]);
+					};
+					db.collection("answerkeys").update({"status":"active"}, { $set: {"winner":player}}, {w:1}, function(err) {
+						if (err){
+							console.log(err);
+						}
+						else {
+							console.log("T/F winner: "+player);
+						}
+					});
+					//player wins, tell them, send new socket info, push winner into DB
+				}
+				else {
+					sendMessage(player, "Your score: "+score);
+				}
+			}
 		});
 	});	
 }
+
+// doc.key is an array of [veracity, statement] arrays; veracity is uppercase F or T
+
+function sendOutStatements(socket) {
+	mongo.Db.connect(mongoUri, function (err, db) {
+		if (err) {
+			console.log(err);
+		}
+		db.collection("answerkeys").find({"status":"active"}).nextObject(function (err, doc) {
+			var answerkey = doc.key;
+			var exampletext = [];	
+			if(doc.winner == "")
+			{
+				for (var i =  0; i < answerkey.length; i++) {
+					var randomletter = ["T","F"][Math.floor(Math.random() * 2)];
+					exampletext.push(randomletter);
+					socket.emit("statement", answerkey[i][1]);
+				};
+				socket.emit("stage2", exampletext.join(" "));
+			}	
+			else {
+				socket.emit("stage3", "stage3");
+				for (var i =  0; i < answerkey.length; i++) {
+					socket.emit("truestatement", answerkey[i][1]+": <b>"+answerkey[i][0]+"</b>  ");
+				};
+			}	
+		});
+	});
+}
+
 
 
 // ------------------- Questions! ------------------
@@ -311,7 +364,7 @@ app.post('/twilio', function(req, res) {
 					case "acquiringwikipedias":
 						storeWikipediaArticles(sender, content);
 						break;
-					case "truefalse":
+					case "truefalseguess":
 						scoreTrueFalse(sender, content);
 						break;
 					case "query":
@@ -329,7 +382,7 @@ app.post('/twilio', function(req, res) {
 // Sekkrit game-advancing commands.
 // Access via: curl -d "pw=****&command=changestate&newstate=map" http://bangbanggames.herokuapp.com/sekkritcommand
 // or: curl -d "pw=****&command=action&action=distributewikipedias" http://bangbanggames.herokuapp.com/sekkritcommand
-// Possible game states: map, aquiringtruefalse, truefalse, aquiringwikipedias
+// Possible game states: map, aquiringtruefalse, truefalse, aquiringwikipedias, query
 // Possible GM actions: distributewikipedias
 app.post('/sekkritcommand', function(req,res) {
 	if (req.body.pw == leacode) {
@@ -373,7 +426,5 @@ function changeGameState(newstate) {
 // index redirects to current activity?
 // queries:
 // 	what words should exist?
-// 	
-// fix transcripting
 
-
+// win condition for TF

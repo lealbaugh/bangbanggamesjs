@@ -70,7 +70,7 @@
 
           socket.on('answer', function(data){
               console.log("Answer is "+data);
-              answerspace.innerHTML = "\""+data+"\" "+answerspace.innerHTML;
+              answerspace.innerHTML = "&ldquo;"+data+"&rdquo; "+answerspace.innerHTML;
               //Append answer to answers list
           });
         };

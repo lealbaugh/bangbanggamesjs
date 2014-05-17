@@ -1,0 +1,99 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"/>
+    <title>?</title>
+    <link href='http://fonts.googleapis.com/css?family=Bitter:400,400italic' rel='stylesheet' type='text/css'>
+    <style type="text/css">
+      html { box-sizing: border-box; height: 100%; padding:0px;}
+      body { box-sizing: border-box; padding:0px; height: 100%; margin: 0 auto; color:#555555; font-family: 'Bitter', Courier, serif; text-align: center; background-color: #dddddd}
+      .phonenumber {text-align: center; font-size: 2em; text-align: center; width: 100%; background-color: white;padding:10px; border-bottom: 1px solid #555555}
+      #wrap {
+        box-sizing: border-box;
+        height: 100%;
+        overflow: hidden;
+        
+      }
+      #query {
+        box-sizing: border-box;
+        font-size: 2em;
+        margin-top: 0.5em;
+      }
+      #statements { 
+        margin: 0 auto;
+        display: block;
+        width:75%;
+      }
+      li {
+        margin: 0.3em;
+        font-size: 1.5em;
+        text-align: left;
+      }
+      p {
+        margin: 0.3em;
+        font-size: 0.75em;
+      }
+    </style>
+    <script type="text/javascript"
+        src="http://cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js"></script>
+    <script type="text/javascript">
+        var socket;
+        var initialized = false;
+        // var queryspace;
+        // var statementspace;
+
+        window.onload = function() {
+
+          statementspace = document.getElementById('statements');
+          queryspace = document.getElementById('query');
+
+          socket = io.connect();
+
+          console.log("queryspace"+queryspace);
+          console.log("statementspace"+statementspace);
+
+          socket.on("connect", function(data) {
+            if (!initialized) {
+              socket.emit("join", "tf");
+              // Rooms are joined up on the server side, so send a request to join us to "query"
+              socket.emit("message", "requestingtf");
+              initialized = true;
+            }
+          })
+          
+          socket.on('message', function(message, data) {
+              console.log("got message: "+message);
+          });
+
+          socket.on('stage2', function(data){
+              queryspace.innerHTML="<p>Which statements are true? Send your guess as a list of Ts and Fs.</p><p><i>Example txt:</i> \'"+data+"\'</p><p>First one to get all correct wins!</p>";
+              //Put Query as H1
+          });
+
+          socket.on('stage3', function(data){
+              statementspace.innerHTML = "";
+              queryspace.innerHTML="<p>Which statements are true?</p><p>Here are the answers:</p>";
+          });
+
+          socket.on('statement', function(data){
+              statementspace.innerHTML = statementspace.innerHTML+"<li>"+data+"</li>";
+              //Append answer to answers list
+          });
+
+          socket.on('truestatement', function(data){
+              statementspace.innerHTML = statementspace.innerHTML+"<li>"+data+"</li>";
+              //Append answer to answers list
+          });
+        };
+
+        
+    </script>
+</head>
+<body>
+  <div id="wrap">
+    <div class="phonenumber">779-232-4276</div>
+    <div id="query"></div>
+    <ol id="statements"></ol>
+  </div>
+</body>
+</html>
