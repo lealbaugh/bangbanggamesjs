@@ -49,9 +49,6 @@
 
           socket = io.connect();
 
-          console.log("queryspace"+queryspace);
-          console.log("statementspace"+statementspace);
-
           socket.on("connect", function(data) {
             if (!initialized) {
               socket.emit("join", "tf");
@@ -71,6 +68,7 @@
           });
 
           socket.on('stage3', function(data){
+            console.log("stage3");
               statementspace.innerHTML = "";
               queryspace.innerHTML="<p>Which statements are true?</p><p>Here are the answers:</p>";
           });

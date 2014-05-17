@@ -254,10 +254,10 @@ function scoreTrueFalse(player, response) {
 					}
 				};
 				if (score == answerkey.length) {
-					sendMessage(player, "You win!");
-					io.sockets.in("map").emit("tf", "stage3");
+					//player wins, tell them, send new socket info, push winner into DB
+					io.sockets.in("tf").emit("stage3", "stage3");
 					for (var i =  0; i < answerkey.length; i++) {
-						io.sockets.in("map").emit("truestatement", "<b>"+answerkey[i][0]+":</b>  "+answerkey[i][1]);
+						io.sockets.in("tf").emit("truestatement", "<b>"+answerkey[i][0]+":</b>  "+answerkey[i][1]);
 					};
 					db.collection("answerkeys").update({"status":"active"}, { $set: {"winner":player}}, {w:1}, function(err) {
 						if (err){
@@ -267,7 +267,7 @@ function scoreTrueFalse(player, response) {
 							console.log("T/F winner: "+player);
 						}
 					});
-					//player wins, tell them, send new socket info, push winner into DB
+					// sendMessage(player, "You win!");
 				}
 				else {
 					sendMessage(player, "Your score: "+score);
