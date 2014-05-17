@@ -256,6 +256,7 @@ function scoreTrueFalse(player, response) {
 				if (score == answerkey.length) {
 					//player wins, tell them, send new socket info, push winner into DB
 					io.sockets.in("tf").emit("stage3", "stage3");
+					
 					for (var i =  0; i < answerkey.length; i++) {
 						io.sockets.in("tf").emit("truestatement", "<b>"+answerkey[i][0]+":</b>  "+answerkey[i][1]);
 					};
