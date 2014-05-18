@@ -6,8 +6,8 @@
     <link href='http://fonts.googleapis.com/css?family=Bitter:400,400italic' rel='stylesheet' type='text/css'>
     <style type="text/css">
       html { box-sizing: border-box; height: 100%; padding:0px;}
-      body { box-sizing: border-box; padding:0px; padding-top:10px; height: 100%; margin: 0 auto; color:#555555; font-family: 'Bitter', Courier, serif; text-align: center; background-color: #dddddd}
-      .phonenumber {text-align: center; font-size: 2em; text-align: center; width: 100%}
+      body { box-sizing: border-box; padding:0px; height: 100%; margin: 0 auto; color:#555555; font-family: 'Bitter', Courier, serif; text-align: center; background-color: #dddddd}
+      .phonenumber {text-align: center; font-size: 3em; text-align: center; width: 100%; background-color: white;padding:10px; border-bottom: 1px solid #555555; color:#3333ff;}
       #wrap {
         box-sizing: border-box;
         height: 100%;
@@ -16,15 +16,25 @@
       }
       #query {
         box-sizing: border-box;
-        font-size: 2em;
-        margin-top: 4px;
+        font-size: 3em;
+        margin-top: 0.5em;
       }
-      #answers { 
-        box-sizing: border-box;
-        font-size: 2em;
-        overflow: hidden;
-        margin: 0 1.5em;
-        height:100%;
+      #statements { 
+        margin: 0 auto;
+        display: block;
+        width:75%;
+      }
+      li {
+        margin: 0.3em;
+        font-size: 1.5em;
+        text-align: left;
+      }
+      p {
+        margin: 0.3em;
+        font-size: 0.75em;
+      }
+      hr {
+        width:50%;
       }
     </style>
 </head>
@@ -35,8 +45,10 @@
     </div>
     <div id="query">
       <p>Text in something true or something false.</p>
-      </p>Begin a true message with 'T'<br>and a false one with 'F'.</p>
-      </p><i>For example:</i><br>"T Yosemite National Park is west of Los Angeles." or "F Texas is the largest US state."</p>
+      <p>Begin a true message with 'T'<br>and a false one with 'F'.</p>
+      <hr>
+      <p><i>For example:</i><br>"T Yosemite National Park is west of Los Angeles." or "F Texas is the largest US state."</p>
+      <hr><p>Try to submit something that will be difficult to guess!</p>
     </div>
     <div id="statements"></div>
   </div>
